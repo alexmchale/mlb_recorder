@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+class MlbRecorder
+
+  def initialize
+  end
+
+  def record(stream_url, output_filename)
+  end
+
+end
+
+def start_recorder(stream_path, output_filename)
+
+end
+
+# Start the recorder
+
+# Monitor the recorder process
