@@ -6,7 +6,7 @@ class MlbRecorder
 
   def initialize(streaming_command, output_filename)
     @streaming_command = streaming_command
-    @encoding_command  = "/usr/local/bin/ffmpeg -i - -c copy #{ Shellwords.escape output_filename }"
+    @encoding_command  = "/usr/bin/avconv -i - -c copy #{ Shellwords.escape output_filename }"
     @output_filename   = output_filename
   end
 
