@@ -38,10 +38,13 @@ class MlbGame
     args               = [ mlbviewer_py, event_id, audio, start_date, debug ].map(&:shellwords)
     mlbviewer_response = `/usr/bin/python #{ args.join(' ') } 2>&1`
 
-    if mlbviewer_response =~ %r[Media URL received:.*(^rtmpdump.*?) \| mplayer]m
+    case mlbviewer_response
+    when %r[Requested Media Not Available Yet]m
+      raise GameNotStarted
+    when %r[Media URL received:.*(^rtmpdump.*?) \| mplayer]m
       $1
     else
-      raise "Cannot find URL in: #{ mlbviewer_response.inspect }"
+      raise MediaNotFound, "Cannot find URL in: #{ mlbviewer_response.inspect }"
     end
   end
 
@@ -49,5 +52,8 @@ class MlbGame
   def started?   ; status =~ /#{ STATUS_STARTED.join '|' }/i   ; end
   def finished?  ; status =~ /#{ STATUS_FINISHED.join '|' }/i  ; end
   def cancelled? ; status =~ /#{ STATUS_CANCELLED.join '|' }/i ; end
+
+  class GameNotStarted < Exception ; end
+  class MediaNotFound  < Exception ; end
 
 end
