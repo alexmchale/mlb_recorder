@@ -33,7 +33,7 @@ class MlbRecordingMonitor
         sleep GAME_ACTIVE_SLEEP_SECONDS
       end
     else
-      while is_child_alive? && is_game_waiting?
+      while is_game_waiting?
         notice "Game is not yet started, waiting #{ GAME_START_SLEEP_SECONDS } seconds ..."
         sleep GAME_START_SLEEP_SECONDS
       end
