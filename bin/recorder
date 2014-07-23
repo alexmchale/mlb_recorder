@@ -1,0 +1,286 @@
+#!/usr/bin/env ruby
+
+require "time"
+require "date"
+require "net/http"
+require "json"
+require "ap"
+require "shellwords"
+
+require "thor"
+require "terminal-table"
+require "chronic"
+
+module Kernel
+
+  def notice(message)
+    puts "(#{ Time.now.iso8601 }) ---> #{ message }"
+  end
+
+end
+
+class MlbRecorder
+
+  attr_reader :streaming_command
+  attr_reader :encoding_command
+  attr_reader :output_filename
+
+  def initialize(streaming_command, output_filename)
+    @streaming_command = streaming_command
+    @encoding_command  = "/usr/local/bin/ffmpeg -i - -c copy #{ Shellwords.escape output_filename }"
+    @output_filename   = output_filename
+  end
+
+  def record!
+    system "#{ streaming_command } | #{ encoding_command }"
+  end
+
+end
+
+class MlbRecordingMonitor
+
+  GAME_START_SLEEP_SECONDS  = 60
+  GAME_ACTIVE_SLEEP_SECONDS = 120
+
+  attr_reader :game_id
+  attr_reader :output_filename_base
+  attr_reader :output_filename
+  attr_reader :output_index
+  attr_reader :start_time
+  attr_reader :last_file_size
+  attr_reader :child_pid
+  attr_reader :started_finished
+
+  def initialize(game_id, output_filename_base)
+    @game_id              = game_id
+    @output_filename_base = output_filename_base
+    @output_index         = 0
+    @started_finished     = game_object.finished?
+  end
+
+  def record!
+    # We have different recording logic for if we started recording after the
+    # game was finished versus started recording before the game started or
+    # while it's airing. This is because if you connect to the stream after the
+    # game has finished, you get playback from the beginning. During the game,
+    # you get playback where the game is currently.
+    if started_finished
+      start_recording!
+
+      while is_child_alive? && is_output_file_growing?
+        notice "Game is recording, waiting #{ GAME_ACTIVE_SLEEP_SECONDS } seconds ..."
+        sleep GAME_ACTIVE_SLEEP_SECONDS
+      end
+    else
+      while is_child_alive? && is_game_waiting?
+        notice "Game is not yet started, waiting #{ GAME_START_SLEEP_SECONDS } seconds ..."
+        sleep GAME_START_SLEEP_SECONDS
+      end
+
+      until is_game_finished?
+        start_recording!
+
+        while is_output_file_growing? && !is_game_finished?
+          notice "Game is recording, waiting #{ GAME_ACTIVE_SLEEP_SECONDS } seconds ..."
+          sleep GAME_ACTIVE_SLEEP_SECONDS
+        end
+
+        finish_recording!
+      end
+    end
+
+    finish_recording!
+    notice "Game has finished!"
+  end
+
+  def start_recording!
+    # Make sure we don't have a recording in progress.
+    finish_recording!
+
+    # Mark our starting point.
+    @start_time      = Time.now
+    @last_file_size  = 0
+
+    # Get a unique filename.
+    while !@output_filename || File.exists?(@output_filename)
+      @output_index   += 1
+      @output_filename = "%s-%04d.mp3" % [ output_filename_base, output_index ]
+    end
+
+    # Fork off the recording process.
+    streaming_command = game_object.streaming_command
+    recorder = MlbRecorder.new(streaming_command, output_filename)
+    @child_pid = wrapped_fork { recorder.record! }
+    notice "Forked PID #{ child_pid } with streaming command: #{ streaming_command }"
+  end
+
+  def finish_recording!
+    Process.kill("KILL", child_pid) if is_child_alive?
+
+    @child_pid      = nil
+    @start_time     = nil
+    @last_file_size = nil
+  end
+
+  def wrapped_fork(&b)
+    fork do
+      begin
+        b.call
+      rescue Exception => e
+        puts "EXCEPTION!"; STDOUT.flush
+      end
+    end
+  end
+
+  def game_object
+    MlbGameList.game(game_id)
+  end
+
+  def is_game_waiting?
+    game_object.waiting?
+  end
+
+  def is_game_started?
+    game_object.started?
+  end
+
+  def is_game_finished?
+    game_object.finished?
+  end
+
+  def is_child_alive?
+    if child_pid == nil
+      false
+    else
+      Process.kill 0, child_pid
+      true
+    end
+  end
+
+  def is_output_file_growing?
+    # Don't give up if we haven't actually started yet.
+    return true if start_time == nil
+    return true if last_file_size == nil
+
+    # Give the child process a grace period to start growing.
+    return true if start_time >= Time.now - 300
+
+    # Update the file size.
+    previous_size   = last_file_size
+    current_size    = File.size(output_filename)
+    @last_file_size = current_size
+
+    # Test to see if the file has grown.
+    previous_size < current_size
+  end
+
+end
+
+class MlbGameList
+
+  attr_reader :date
+  attr_reader :games
+
+  def initialize(date = Date.today)
+    @date  = date
+    @json  = Net::HTTP.get(URI.parse(mlb_media_center_grid_url))
+    @games = JSON.load(@json)["data"]["games"]["game"].map { |game_data| MlbGame.new(game_data) }
+  end
+
+  def mlb_media_center_grid_url
+    y = date.strftime("%Y")
+    m = date.strftime("%m")
+    d = date.strftime("%d")
+
+    "http://mlb.mlb.com/gdcross/components/game/mlb/year_#{y}/month_#{m}/day_#{d}/grid.json"
+  end
+
+  def find_game(id)
+    games.find { |g| g.id == id } or raise("cannot find game #{id.inspect}")
+  end
+
+  def self.game(id)
+    date = Date.parse(id[/^\d+-\d+-(\d{4}-\d{2}-\d{2})$/, 1])
+    new(date).find_game(id)
+  end
+
+end
+
+class MlbGame
+
+  attr_reader :id
+  attr_reader :home_team_name
+  attr_reader :away_team_name
+  attr_reader :status
+
+  STATUS_WAITING   = [ "Preview", "Delayed Start", "Pre-Game" ]
+  STATUS_STARTED   = [ "Warmup", "In Progress", "Delayed" ]
+  STATUS_FINISHED  = [ "Final", "Game Over" ]
+  STATUS_CANCELLED = [ "Postponed", "Suspended" ]
+
+  def initialize(game_data)
+    @game_data      = game_data
+    @id             = @game_data["calendar_event_id"]
+    @home_team_name = @game_data["home_team_name"]
+    @away_team_name = @game_data["away_team_name"]
+    @status         = @game_data["status"]
+  end
+
+  def date
+    Date.parse(id[/^\d+-\d+-(\d{4}-\d{2}-\d{2})$/, 1])
+  end
+
+  def streaming_command
+    mlbviewer_py       = "mlbviewer2014/mlbplay.py"
+    event_id           = "event_id=#{ Shellwords.escape(id) }"
+    audio              = "audio=det" # TODO - Make this flexible
+    start_date         = "startdate=#{ Shellwords.escape(date.strftime('%m/%d/%y')) }"
+    debug              = "debug=1"
+    args               = [ mlbviewer_py, event_id, audio, start_date, debug ]
+    mlbviewer_response = `/usr/bin/python #{ args.join(' ') } 2>&1`
+
+    if mlbviewer_response =~ %r[Media URL received:.*(^rtmpdump.*?) \| mplayer]m
+      $1
+    else
+      raise "Cannot find URL in: #{ mlbviewer_response.inspect }"
+    end
+  end
+
+  def waiting?   ; status =~ /#{ STATUS_WAITING.join '|' }/i   ; end
+  def started?   ; status =~ /#{ STATUS_STARTED.join '|' }/i   ; end
+  def finished?  ; status =~ /#{ STATUS_FINISHED.join '|' }/i  ; end
+  def cancelled? ; status =~ /#{ STATUS_CANCELLED.join '|' }/i ; end
+
+end
+
+class RecordApp < Thor
+
+  desc "games DATE", "List the games that are available for the given date, defaults to today"
+  def games(date = Date.today)
+    date = Chronic.parse(date).to_date unless date.kind_of?(Date)
+
+    table = Terminal::Table.new(headings: [ "Game ID", "Home Team", "Away Team", "Status" ])
+
+    MlbGameList.new(date).games.each do |game|
+      table << [
+        game.id,
+        game.home_team_name,
+        game.away_team_name,
+        game.status,
+      ]
+    end
+
+    puts table
+  end
+
+  desc "record GAME_ID", "Record the specified game"
+  def record(game_id)
+    path = File.expand_path("~/Music/Tigers/tigers-game")
+    MlbRecordingMonitor.new(game_id, path).record!
+  end
+
+end
+
+if $0 == __FILE__
+  RecordApp.start
+end
