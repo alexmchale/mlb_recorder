@@ -28,8 +28,11 @@ class RecordApp < Thor
   def publish(game_id)
     ## Details about the destination
 
-    game       = MlbGameList.game(game_id)
-    hosted_dir = "/webapps/downloads/alexcast"
+    game           = MlbGameList.game(game_id)
+    hosted_dir     = "/webapps/downloads/alexcast"
+    mlbviewer_root = File.expand_path("../../../mlbviewer2014", __FILE__)
+    wavfile        = "/tmp/mlbgame.wav"
+    render_sh      = File.join(hosted_dir, "render.sh")
 
     ## Print game details
 
@@ -37,40 +40,43 @@ class RecordApp < Thor
     puts "Game matchup   : #{ game.away_team.name } at #{ game.home_team.name }"
     puts "Event ID       : #{ game.id }"
     puts "Status         : #{ game.status }"
+    puts "Venue          : #{ game.venue_name }"
+    puts
 
     ## If the game isn't final, don't try to download
 
     unless game.finished?
-      puts
       puts "Game is not final, exiting."
       exit
     end
 
     ## Download the game, encode it to mp3
 
-    j    = "j=#{ [ month, day, year[/\d\d$/] ].join('/') }"
-    e    = "e=#{ event_id }"
-    a    = "a=#{ requested_team }"
-    mp3  = [ a, year + month + day, iteration, "mp3" ].join(".")
-    args = [ "mlbplay.py", j, e, a ].map(&:shellwords)
+    title = "%s at %s - %s-%d" % [
+      game.away_team.short_name,
+      game.home_team.short_name,
+      game.time.strftime('%m/%d/%y'),
+      game.game_number,
+    ]
 
-    system "rm -f mlbgame.wav"
+    bcast = 'det'
+    j     = "j=#{ game.time.strftime('%m/%d/%y') }"
+    e     = "e=#{ game.id }"
+    a     = "a=#{ bcast }"
+    mp3   = [ bcast, game.time.strftime('%Y%m%d'), '1', "mp3" ].join(".")
+    args  = [ "#{mlbviewer_root}/mlbplay.py", j, e, a ].map(&:shellwords)
+    tags  = { TIT2: title, TPE1: game.venue_name, TDR: game.time.iso8601 }
+    tags  = tags.map { |k, v| "--tv #{ k }=#{ v.to_s.shellwords }" }.join(" ")
+
+    FileUtils.rm_rf wavfile
     system "python #{ args.join ' ' }" or raise "couldn't finish download"
-    system "lame -a mlbgame.wav #{ mp3.shellwords }" or raise "couldn't encode mp3"
-
-    ## Set mp3 tags
-
-    title = "#{ away_team.upcase } at #{ home_team.upcase } - #{ month }/#{ day }/#{ year }-#{ iteration }"
-
-    system "id3v2 --TIT2 #{ Shellwords.escape(title) } #{ Shellwords.escape(mp3) }"
-    system "id3v2 --TPE1 #{ Shellwords.escape('Radio Broadcast') } #{ Shellwords.escape(mp3) }"
-    system "touch -d '#{ year }-#{ month }-#{ day } #{ time }' #{ Shellwords.escape(mp3) }"
+    system "lame -a #{ tags } #{ wavfile.shellwords } #{ mp3.shellwords }" or raise "couldn't encode mp3"
 
     ## Deploy the new file
 
-    FileUtils.rm_rf "mlbgame.wav"
+    FileUtils.rm_rf wavfile
     FileUtils.mv mp3, hosted_dir
-    system File.join(hosted_dir, "render.sh")
+    system render_sh
   end
 
 end

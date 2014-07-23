@@ -1,9 +1,10 @@
 class MlbGame
 
   attr_reader :id
-  attr_reader :time
+  attr_reader :time, :game_number
   attr_reader :home_team, :home_team_name
   attr_reader :away_team, :away_team_name
+  attr_reader :venue_name
   attr_reader :status
 
   STATUS_WAITING   = [ "Preview", "Delayed Start", "Pre-Game" ]
@@ -14,12 +15,14 @@ class MlbGame
   def initialize(game_data)
     @game_data      = game_data
     @id             = @game_data["calendar_event_id"]
-    @time           = Time.parse("#{ date } #{ @game_data['event_time'] }")
     @home_team_name = @game_data["home_team_name"]
     @home_team      = MlbTeam.find(@home_team_name)
     @away_team_name = @game_data["away_team_name"]
     @away_team      = MlbTeam.find(@away_team_name)
     @status         = @game_data["status"]
+    @time           = @home_team.time_zone.parse("#{ date } #{ @game_data['event_time'] }")
+    @game_number    = Integer(@game_data["game_nbr"])
+    @venue_name     = @game_data["venue"]
   end
 
   def date
