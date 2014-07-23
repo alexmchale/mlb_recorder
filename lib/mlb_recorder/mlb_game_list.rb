@@ -18,12 +18,14 @@ class MlbGameList
   end
 
   def find_game(id)
-    games.find { |g| g.id == id } or raise("cannot find game #{id.inspect}")
+    games.find { |g| g.id == id } or raise(GameNotFound, "cannot find game #{id.inspect}")
   end
 
   def self.game(id)
     date = Date.parse(id[/^\d+-\d+-(\d{4}-\d{2}-\d{2})$/, 1])
     new(date).find_game(id)
   end
+
+  class GameNotFound < StandardError ; end
 
 end

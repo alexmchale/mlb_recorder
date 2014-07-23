@@ -53,7 +53,7 @@ class MlbGame
   def finished?  ; status =~ /#{ STATUS_FINISHED.join '|' }/i  ; end
   def cancelled? ; status =~ /#{ STATUS_CANCELLED.join '|' }/i ; end
 
-  class GameNotStarted < Exception ; end
-  class MediaNotFound  < Exception ; end
+  class GameNotStarted < StandardError ; end
+  class MediaNotFound  < StandardError ; end
 
 end
