@@ -65,12 +65,13 @@ class RecordApp < Thor
     a     = "a=#{ bcast }"
     mp3   = [ bcast, game.time.strftime('%Y%m%d'), '1', "mp3" ].join(".")
     args  = [ "#{mlbviewer_root}/mlbplay.py", j, e, a ].map(&:shellwords)
-    tags  = { TIT2: title, TPE1: game.venue_name, TDR: game.time.iso8601 }
+    tags  = { TIT2: title, TPE1: game.venue_name }
     tags  = tags.map { |k, v| "--tv #{ k }=#{ v.to_s.shellwords }" }.join(" ")
 
     FileUtils.rm_rf wavfile
     system "python #{ args.join ' ' }" or raise "couldn't finish download"
     system "lame -a #{ tags } #{ wavfile.shellwords } #{ mp3.shellwords }" or raise "couldn't encode mp3"
+    system "touch -d #{ game.time.iso8601.shellwords } #{ mp3.shellwords }"
 
     ## Deploy the new file
 
