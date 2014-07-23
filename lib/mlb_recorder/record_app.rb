@@ -9,8 +9,8 @@ class RecordApp < Thor
     MlbGameList.new(date).games.each do |game|
       table << [
         game.id,
-        game.home_team_name,
-        game.away_team_name,
+        game.home_team.color1 { game.home_team_name },
+        game.away_team.color1 { game.away_team_name },
         game.status,
       ]
     end

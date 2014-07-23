@@ -17,6 +17,8 @@ end
 
 class String
 
+  include Term::ANSIColor
+
   def shellwords
     Shellwords.escape(self)
   end
