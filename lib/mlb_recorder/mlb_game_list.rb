@@ -9,7 +9,7 @@ class MlbGameList
     @data  = JSON.load(@json)
     @games = @data["data"]["games"]["game"].map { |game_data| MlbGame.new(game_data) }
   rescue Exception => e
-    [ @date, @json, @data, @games ].each do |obj|
+    [ mlb_media_center_grid_url, @date, @json, @data, @games ].each do |obj|
       puts
       ap obj
     end

@@ -5,12 +5,14 @@ require "net/http"
 require "json"
 require "shellwords"
 require "rubygems"
+require "yaml"
 
 # Load rubygems
 require "bundler/setup"
 Bundler.require(:default)
 
 # Load local libraries
+require "mlb_recorder/config"
 require "mlb_recorder/extensions"
 require "mlb_recorder/mlb_recorder"
 require "mlb_recorder/mlb_recording_monitor"

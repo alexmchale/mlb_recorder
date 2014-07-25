@@ -2,16 +2,33 @@ class RecordApp < Thor
 
   desc "games DATE", "List the games that are available for the given date, defaults to today"
   def games(date = Date.today)
+    time = -> game {
+      game.time.in_time_zone(
+        if Conf.time_zone_name?
+          Conf.time_zone
+        else
+          game.home_team.time_zone
+        end
+      ).strftime("%m/%d/%y %I%P").gsub(/ 0/, " ").gsub(/^0+/, "")
+    }
+
     columns = -> game {
-      # Return the values hash
       {
         "Game ID"   => if game then game.id             end,
-        "Time"      => if game then game.time.to_s      end,
+        "Time"      => if game then time[game]          end,
         "Away Team" => if game then game.away_team.name end,
         "Home Team" => if game then game.home_team.name end,
         "Status"    => if game then game.status         end,
       }
     }
+
+    unless Conf.time_zone_name?
+      choose do |menu|
+        menu.choices(*ActiveSupport::TimeZone.us_zones.map(&:name)) do |choice|
+          Conf.time_zone_name = choice
+        end
+      end
+    end
 
     date  = Chronic.parse(date).to_date unless date.kind_of?(Date)
     table = Terminal::Table.new(headings: columns[nil].keys.map(&:yellow))
@@ -116,6 +133,16 @@ class RecordApp < Thor
     FileUtils.rm_rf wavfile
     FileUtils.mv mp3, hosted_dir
     sh render_sh
+  end
+
+  desc "favorite", "Set your favorite team"
+  def favorite
+    choose do |menu|
+      menu.prompt = "What is your favorite team? "
+      menu.choices(*MlbTeam.all.map(&:name)) do |team_name|
+        ap team_name
+      end
+    end
   end
 
 end

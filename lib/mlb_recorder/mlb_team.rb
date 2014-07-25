@@ -219,4 +219,8 @@ class MlbTeam
     new team_data
   end
 
+  def self.all
+    TEAM_DATA.values.map { |team_data| new team_data }
+  end
+
 end
