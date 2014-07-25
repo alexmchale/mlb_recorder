@@ -1,5 +1,7 @@
 class MlbTeam
 
+  include Comparable
+
   TEAM_DATA = {
     "ari" => {
       :name       => "Arizona Diamondbacks",
@@ -200,6 +202,10 @@ class MlbTeam
 
   def color1(s = nil, &b)
     (s || b.call).to_s.send(@color1)
+  end
+
+  def <=>(other)
+    self.name <=> other.name
   end
 
   def self.find(id)

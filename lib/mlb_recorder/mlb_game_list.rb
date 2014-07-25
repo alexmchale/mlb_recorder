@@ -29,6 +29,14 @@ class MlbGameList
     games.find { |g| g.id == id } or raise(GameNotFound, "cannot find game #{id.inspect}")
   end
 
+  def find_with_team(team)
+    team = MlbTeam.find(team) unless team.kind_of?(MlbTeam)
+
+    games.select do |game|
+      (game.home_team == team) || (game.away_team == team)
+    end
+  end
+
   def self.game(id)
     date = Date.parse(id[/^\d+-\d+-(\d{4}-\d{2}-\d{2})$/, 1])
     new(date).find_game(id)

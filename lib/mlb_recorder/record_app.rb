@@ -2,16 +2,25 @@ class RecordApp < Thor
 
   desc "games DATE", "List the games that are available for the given date, defaults to today"
   def games(date = Date.today)
-    date = Chronic.parse(date).to_date unless date.kind_of?(Date)
+    date  = Chronic.parse(date).to_date unless date.kind_of?(Date)
+    table = Terminal::Table.new(headings: [ "Game ID", "Home Team", "Away Team", "Status" ].map(&:yellow))
 
-    table = Terminal::Table.new(headings: [ "Game ID", "Home Team", "Away Team", "Status" ])
+    MlbGameList.new(date).games.each.with_index do |game, i|
+      color = -> string {
+        if game.home_team.name == "Detroit Tigers" || game.away_team.name == "Detroit Tigers"
+          string.to_s.yellow
+        elsif i%2 == 0
+          string.to_s.cyan
+        else
+          string.to_s.blue
+        end
+      }
 
-    MlbGameList.new(date).games.each do |game|
       table << [
-        game.id,
-        game.home_team.color1 { game.home_team_name },
-        game.away_team.color1 { game.away_team_name },
-        game.status,
+        color[game.id],
+        color[game.home_team.name],
+        color[game.away_team.name],
+        color[game.status],
       ]
     end
 
@@ -26,9 +35,27 @@ class RecordApp < Thor
 
   desc "publish GAME_ID", "Download and publish the specified game"
   def publish(game_id)
+    ## Get game details
+
+    game_spec = game_id.split(",")
+
+    game =
+      if game_spec.length == 1
+        MlbGameList.game(game_id)
+      elsif game_spec.length == 2
+        list  = MlbGameList.new(Date.parse(game_spec[0]))
+        games = list.find_with_team(game_spec[1])
+        games[0]
+      elsif game_spec.length == 3
+        list  = MlbGameList.new(Date.parse(game_spec[0]))
+        games = list.find_with_team(game_spec[1])
+        games.find { |game| game.game_number == Integer(game_spec[2]) }
+      end
+
+    raise "game not found" unless game.kind_of? MlbGame
+
     ## Details about the destination
 
-    game           = MlbGameList.game(game_id)
     hosted_dir     = "/webapps/downloads/alexcast"
     mlbviewer_root = File.expand_path("../../../mlbviewer2014", __FILE__)
     wavfile        = "/tmp/mlbgame.wav"
@@ -36,17 +63,21 @@ class RecordApp < Thor
 
     ## Print game details
 
-    puts "Game starts at : #{ game.time }"
-    puts "Game matchup   : #{ game.away_team.name } at #{ game.home_team.name }"
-    puts "Event ID       : #{ game.id }"
-    puts "Status         : #{ game.status }"
-    puts "Venue          : #{ game.venue_name }"
-    puts
+    table = Terminal::Table.new
+
+    table << [ "ID"      .yellow, game.id                                                .green ]
+    table << [ "Time"    .yellow, game.time.to_s                                         .green ]
+    table << [ "Matchup" .yellow, "#{ game.away_team.name } at #{ game.home_team.name }" .green ]
+    table << [ "Status"  .yellow, game.status                                            .green ]
+    table << [ "Venue"   .yellow, game.venue_name                                        .green ]
+
+    puts table
 
     ## If the game isn't final, don't try to download
 
     unless game.finished?
-      puts "Game is not final, exiting."
+      puts
+      puts "Game is not final, exiting.".red
       exit
     end
 
