@@ -5,8 +5,16 @@ class MlbGameList
 
   def initialize(date = Date.today)
     @date  = date
-    @json  = Net::HTTP.get(URI.parse(mlb_media_center_grid_url))
-    @games = JSON.load(@json)["data"]["games"]["game"].map { |game_data| MlbGame.new(game_data) }
+    @json  = Typhoeus.get(mlb_media_center_grid_url, followlocation: true).body
+    @data  = JSON.load(@json)
+    @games = @data["data"]["games"]["game"].map { |game_data| MlbGame.new(game_data) }
+  rescue Exception => e
+    [ @date, @json, @data, @games ].each do |obj|
+      puts
+      ap obj
+    end
+    puts
+    raise e
   end
 
   def mlb_media_center_grid_url

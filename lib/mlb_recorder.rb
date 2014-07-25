@@ -12,6 +12,7 @@ begin
   require "chronic"
   require "active_support/time"
   require "term/ansicolor"
+  require "typhoeus"
 
   require "mlb_recorder/extensions"
   require "mlb_recorder/mlb_recorder"
@@ -23,7 +24,7 @@ begin
 
 rescue LoadError
 
-  puts "gem install --no-rdoc --no-ri awesome_print thor terminal-table chronic activesupport term-ansicolor"
+  puts "gem install --no-rdoc --no-ri awesome_print thor terminal-table chronic activesupport term-ansicolor typhoeus"
   exit
 
 end
