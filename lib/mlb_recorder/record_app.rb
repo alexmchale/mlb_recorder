@@ -140,7 +140,7 @@ class RecordApp < Thor
     choose do |menu|
       menu.prompt = "What is your favorite team? "
       menu.choices(*MlbTeam.all.map(&:name)) do |team_name|
-        ap team_name
+        Conf.favorite_team_name = team_name
       end
     end
   end

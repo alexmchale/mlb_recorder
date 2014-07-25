@@ -212,9 +212,12 @@ class MlbTeam
     id = "Diamondbacks" if id == "D-backs"
 
     team_data ||= TEAM_DATA[id.to_s]
+    team_data ||= TEAM_DATA.values.find { |team| team[:name] == id.to_s }
     team_data ||= TEAM_DATA.values.find { |team| team[:short_name] == id.to_s }
 
-    raise "cannot find team details for #{ id.inspect }" unless team_data
+    if team_data == nil
+      raise TeamNotFound, "cannot find team details for #{ id.inspect }"
+    end
 
     new team_data
   end
@@ -222,5 +225,7 @@ class MlbTeam
   def self.all
     TEAM_DATA.values.map { |team_data| new team_data }
   end
+
+  class TeamNotFound < RuntimeError ; end
 
 end
