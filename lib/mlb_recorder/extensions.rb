@@ -13,6 +13,13 @@ module Kernel
     result
   end
 
+  def eastern_time_zone
+    $eastern_time_zone ||=
+      ActiveSupport::TimeZone.us_zones.find do |zone|
+        zone.name =~ /eastern/i
+      end
+  end
+
 end
 
 class String

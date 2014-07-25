@@ -20,7 +20,7 @@ class MlbGame
     @away_team_name = @game_data["away_team_name"]
     @away_team      = MlbTeam.find(@away_team_name)
     @status         = @game_data["status"]
-    @time           = @home_team.time_zone.parse("#{ date } #{ @game_data['event_time'] }")
+    @time           = eastern_time_zone.parse("#{ date } #{ @game_data['event_time'] }")
     @game_number    = Integer(@game_data["game_nbr"])
     @venue_name     = @game_data["venue"]
   end

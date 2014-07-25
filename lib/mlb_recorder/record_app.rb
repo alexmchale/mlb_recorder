@@ -2,10 +2,22 @@ class RecordApp < Thor
 
   desc "games DATE", "List the games that are available for the given date, defaults to today"
   def games(date = Date.today)
+    columns = -> game {
+      # Return the values hash
+      {
+        "Game ID"   => if game then game.id             end,
+        "Time"      => if game then game.time.to_s      end,
+        "Away Team" => if game then game.away_team.name end,
+        "Home Team" => if game then game.home_team.name end,
+        "Status"    => if game then game.status         end,
+      }
+    }
+
     date  = Chronic.parse(date).to_date unless date.kind_of?(Date)
-    table = Terminal::Table.new(headings: [ "Game ID", "Home Team", "Away Team", "Status" ].map(&:yellow))
+    table = Terminal::Table.new(headings: columns[nil].keys.map(&:yellow))
 
     MlbGameList.new(date).games.each.with_index do |game, i|
+      # Colorize the given string
       color = -> string {
         if game.home_team.name == "Detroit Tigers" || game.away_team.name == "Detroit Tigers"
           string.to_s.yellow
@@ -16,12 +28,7 @@ class RecordApp < Thor
         end
       }
 
-      table << [
-        color[game.id],
-        color[game.home_team.name],
-        color[game.away_team.name],
-        color[game.status],
-      ]
+      table << columns[game].values.map { |x| color[x] }
     end
 
     puts table
