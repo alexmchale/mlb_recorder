@@ -146,4 +146,12 @@ class RecordApp < Thor
     end
   end
 
+  desc "mlbauth USERNAME PASSWORD", "Set your MLB.TV credentials"
+  def setauth(username, password)
+    Conf.mlb_username = username
+    Conf.mlb_password = password
+
+    puts "MLB.TV authentication has been configured.".green
+  end
+
 end
