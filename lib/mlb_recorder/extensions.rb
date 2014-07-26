@@ -1,7 +1,7 @@
 module Kernel
 
   def notice(message)
-    puts "(#{ Time.now.iso8601 }) ---> #{ message }"
+    puts "#{ Time.now.iso8601.yellow } ---> #{ message.green }"
   end
 
   def sh(command)
@@ -18,6 +18,12 @@ module Kernel
       ActiveSupport::TimeZone.us_zones.find do |zone|
         zone.name =~ /eastern/i
       end
+  end
+
+  def die(message)
+    puts
+    puts message.to_s.red
+    exit 1
   end
 
 end
