@@ -37,7 +37,7 @@ class RecordApp < Thor
     MlbGameList.new(date).games.each.with_index do |game, i|
       # Colorize the given string
       color = -> string {
-        if game.home_team.name == "Detroit Tigers" || game.away_team.name == "Detroit Tigers"
+        if [ game.home_team, game.away_team ].include? Conf.favorite_team
           string.to_s.yellow
         elsif i%2 == 0
           string.to_s.cyan
