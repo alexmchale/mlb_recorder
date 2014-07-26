@@ -44,6 +44,4 @@ class MlbGameList
     new(date).find_game(id)
   end
 
-  class GameNotFound < StandardError ; end
-
 end

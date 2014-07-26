@@ -125,8 +125,8 @@ class RecordApp < Thor
     tags  = tags.map { |k, v| "--#{ k } #{ v.to_s.shellwords }" }.join(" ")
 
     FileUtils.rm_rf wavfile
-    sh "python #{ args.join ' ' }" or raise "couldn't finish download"
-    sh "lame -a #{ tags } #{ wavfile.shellwords } #{ mp3.shellwords }" or raise "couldn't encode mp3"
+    sh "python #{ args.join ' ' }" or die "Could not get the audio stream."
+    sh "lame -a #{ tags } #{ wavfile.shellwords } #{ mp3.shellwords }" or die "Could not encode MP3."
     sh "touch -d #{ game.time.iso8601.shellwords } #{ mp3.shellwords }"
 
     ## Deploy the new file

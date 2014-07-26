@@ -11,6 +11,7 @@ class MlbGame
   STATUS_STARTED   = [ "Warmup", "In Progress", "Delayed" ]
   STATUS_FINISHED  = [ "Final", "Game Over" ]
   STATUS_CANCELLED = [ "Postponed", "Suspended" ]
+  STATUS_ALL       = STATUS_WAITING + STATUS_STARTED + STATUS_FINISHED + STATUS_CANCELLED
 
   def initialize(game_data)
     @game_data      = game_data
@@ -23,6 +24,11 @@ class MlbGame
     @time           = eastern_time_zone.parse("#{ date } #{ @game_data['event_time'] }")
     @game_number    = Integer(@game_data["game_nbr"])
     @venue_name     = @game_data["venue"]
+
+    # Verify that we know about the specified game status.
+    unless STATUS_ALL.include? @status
+      die "Unknown game status #{ @status.inspect }."
+    end
   end
 
   def date
@@ -52,8 +58,5 @@ class MlbGame
   def started?   ; status =~ /#{ STATUS_STARTED.join '|' }/i   ; end
   def finished?  ; status =~ /#{ STATUS_FINISHED.join '|' }/i  ; end
   def cancelled? ; status =~ /#{ STATUS_CANCELLED.join '|' }/i ; end
-
-  class GameNotStarted < StandardError ; end
-  class MediaNotFound  < StandardError ; end
 
 end
