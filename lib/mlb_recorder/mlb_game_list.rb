@@ -4,17 +4,19 @@ class MlbGameList
   attr_reader :games
 
   def initialize(date = Date.today)
-    @date  = date
-    @json  = Typhoeus.get(mlb_media_center_grid_url, followlocation: true).body
-    @data  = JSON.load(@json)
-    @games = @data["data"]["games"]["game"].map { |game_data| MlbGame.new(game_data) }
-  rescue Exception => e
-    [ mlb_media_center_grid_url, @date, @json, @data, @games ].each do |obj|
-      puts
-      ap obj
+    @date     = date
+    @response = Typhoeus.get(mlb_media_center_grid_url, followlocation: true)
+
+    if @response.success?
+      @json  = @response.body
+      @data  = JSON.load(@json)
+      @games = @data["data"]["games"]["game"].map { |game_data| MlbGame.new(game_data) }
+    else
+      ap @date
+      ap @response
+
+      die "Could not fetch MLB game list."
     end
-    puts
-    raise e
   end
 
   def mlb_media_center_grid_url
