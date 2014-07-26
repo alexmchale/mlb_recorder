@@ -1,6 +1,15 @@
 #!/usr/bin/env ruby
 
-$LOAD_PATH << File.expand_path(File.join(File.dirname(__FILE__), "..", "lib"))
+$LOAD_PATH.unshift(
+  File.expand_path(
+    File.join(
+      if File.symlink?(__FILE__) then File.readlink(__FILE__) else __FILE__ end,
+      "..",
+      "..",
+      "lib",
+    )
+  )
+)
 
 require "mlb_recorder"
 

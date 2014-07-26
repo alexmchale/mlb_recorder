@@ -8,8 +8,11 @@ require "rubygems"
 require "yaml"
 
 # Load rubygems
+pwd = Dir.pwd
+Dir.chdir(File.expand_path("../..", __FILE__))
 require "bundler/setup"
 Bundler.require(:default)
+Dir.chdir(pwd)
 
 # Load local libraries
 require "mlb_recorder/config"
