@@ -24,6 +24,7 @@ class RecordApp < Thor
 
     unless Conf.time_zone_name?
       choose do |menu|
+        menu.prompt = "What's your time zone? "
         menu.choices(*ActiveSupport::TimeZone.us_zones.map(&:name)) do |choice|
           Conf.time_zone_name = choice
         end
