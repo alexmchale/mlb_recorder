@@ -52,7 +52,7 @@ class Conf
     end
 
     def favorite_team
-      MlbTeam.find(favorite_team_name)
+      MlbTeam.find(favorite_team_name) if favorite_team_name?
     end
 
   end
