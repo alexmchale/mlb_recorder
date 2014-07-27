@@ -185,9 +185,9 @@ class MlbTeam
     },
   }
 
-  attr_reader :time_zone, :name, :short_name, :color1
+  attr_reader :time_zone, :name, :short_name, :code, :color1
 
-  def initialize(team_data)
+  def initialize(code, team_data)
     @details = team_data
 
     @time_zone =
@@ -197,6 +197,7 @@ class MlbTeam
 
     @name       = @details[:name]
     @short_name = @details[:short_name]
+    @code       = code
     @color1     = @details[:color1]
   end
 
@@ -215,15 +216,17 @@ class MlbTeam
     team_data ||= TEAM_DATA.values.find { |team| team[:name] == id.to_s }
     team_data ||= TEAM_DATA.values.find { |team| team[:short_name] == id.to_s }
 
-    if team_data == nil
+    code = TEAM_DATA.keys.find { |k| TEAM_DATA[k] == team_data }
+
+    if code == nil || team_data == nil
       raise TeamNotFound, "cannot find team details for #{ id.inspect }"
     end
 
-    new team_data
+    new code, team_data
   end
 
   def self.all
-    TEAM_DATA.values.map { |team_data| new team_data }
+    TEAM_DATA.map { |code, team_data| new code, team_data }
   end
 
   class TeamNotFound < RuntimeError ; end

@@ -20,7 +20,7 @@ class RecordApp < Thor
     }
 
     # Output a table with the game listing.
-    puts Terminal::Table.new(headings: columns[nil].keys.map(&:yellow)) do |table|
+    puts(Terminal::Table.new(headings: columns[nil].keys.map(&:yellow)) do |table|
       MlbGameList.new(date).games.each.with_index do |game, i|
         # Colorize the given string
         color1 = if i%2==0 then :cyan else :blue end
@@ -37,7 +37,7 @@ class RecordApp < Thor
           x.to_s.color(color1).on_color(color2)
         end
       end
-    end
+    end)
   end
 
   desc "record GAME_ID", "Record the specified game"
@@ -103,17 +103,12 @@ class RecordApp < Thor
       game.game_number,
     ]
 
-    bcast = 'det'
-    j     = "j=#{ game.time.strftime('%m/%d/%y') }"
-    e     = "e=#{ game.id }"
-    a     = "a=#{ bcast }"
-    mp3   = [ bcast, game.time.strftime('%Y%m%d'), '1', "mp3" ].join(".")
-    args  = [ "#{mlbviewer_root}/mlbplay.py", j, e, a ].map(&:shellwords)
-    tags  = { tt: title, ta: game.venue_name, tl: "Major League Baseball", tg: 12 }
-    tags  = tags.map { |k, v| "--#{ k } #{ v.to_s.shellwords }" }.join(" ")
+    mp3  = [ bcast, game.time.strftime('%Y%m%d'), '1', "mp3" ].join(".")
+    tags = { tt: title, ta: game.venue_name, tl: "Major League Baseball", tg: 12 }
+    tags = tags.map { |k, v| "--#{ k } #{ v.to_s.shellwords }" }.join(" ")
 
     FileUtils.rm_rf wavfile
-    sh "python #{ args.join ' ' }" or die "Could not get the audio stream."
+    sh game.streaming_command(filename: wavfile) or die "Could not get the audio stream."
     sh "lame -a #{ tags } #{ wavfile.shellwords } #{ mp3.shellwords }" or die "Could not encode MP3."
     sh "touch -d #{ game.time.iso8601.shellwords } #{ mp3.shellwords }"
 
@@ -124,8 +119,8 @@ class RecordApp < Thor
     sh render_sh
   end
 
-  desc "stream GAME_ID", "Stream the specified game to a wav file"
-  def stream(game_id)
+  desc "stream GAME_ID WAVFILE", "Stream the specified game to a wav file"
+  def stream(game_id, path)
     ## Get game details
 
     game_spec = game_id.split(",")
@@ -145,35 +140,20 @@ class RecordApp < Thor
 
     raise "game not found" unless game.kind_of? MlbGame
 
-    ## Details about the destination
-
-    hosted_dir     = "/webapps/downloads/alexcast"
-    mlbviewer_root = File.expand_path("../../../mlbviewer2014", __FILE__)
-    wavfile        = "/tmp/mlbgame.wav"
-    render_sh      = File.join(hosted_dir, "render.sh")
-
     ## Print game details
 
-    table = Terminal::Table.new
-
-    table << [ "ID"      .yellow, game.id                                                .green ]
-    table << [ "Time"    .yellow, game.time.to_s                                         .green ]
-    table << [ "Matchup" .yellow, "#{ game.away_team.name } at #{ game.home_team.name }" .green ]
-    table << [ "Status"  .yellow, game.status                                            .green ]
-    table << [ "Venue"   .yellow, game.venue_name                                        .green ]
-
-    puts table
+    puts(Terminal::Table.new do |table|
+      table << [ "ID"      .yellow, game.id                                                .green ]
+      table << [ "Time"    .yellow, game.time.to_s                                         .green ]
+      table << [ "Matchup" .yellow, "#{ game.away_team.name } at #{ game.home_team.name }" .green ]
+      table << [ "Status"  .yellow, game.status                                            .green ]
+      table << [ "Venue"   .yellow, game.venue_name                                        .green ]
+    end)
 
     ## Stream to disk
 
-    bcast = 'det'
-    j     = "j=#{ game.time.strftime('%m/%d/%y') }"
-    e     = "e=#{ game.id }"
-    a     = "a=#{ bcast }"
-    args  = [ "#{mlbviewer_root}/mlbplay.py", j, e, a ].map(&:shellwords)
-
-    FileUtils.rm_rf wavfile
-    sh "python #{ args.join ' ' }" or die "Could not get the audio stream."
+    FileUtils.rm_rf path
+    sh game.streaming_command(filename: path) or die "Could not get the audio stream."
   end
 
   desc "favorite", "Set your favorite team"

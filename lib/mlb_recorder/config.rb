@@ -47,6 +47,10 @@ class Conf
       write(read.tap { |hash| hash[key.to_s] = value })
     end
 
+    def app_root
+      File.expand_path("../../..", __FILE__)
+    end
+
     def time_zone
       ActiveSupport::TimeZone.all.find { |zone| zone.name == time_zone_name }
     end

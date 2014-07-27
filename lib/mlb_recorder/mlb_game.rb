@@ -35,20 +35,48 @@ class MlbGame
     Date.parse(id[/^\d+-\d+-(\d{4}-\d{2}-\d{2})$/, 1])
   end
 
-  def streaming_command
-    mlbviewer_py       = "mlbviewer2014/mlbplay.py"
+  def streaming_command(filename: "/tmp/mlbgame.wav", team: Conf.favorite_team, live: false, stdout: false)
+    # Write the MLB configuration file.
+    audio_player = "mplayer -cache 512 -vo null -ao pcm:file=#{ File.expand_path(filename).shellwords }"
+    File.open(File.expand_path("~/.mlb/config"), "w") do |f|
+      f.puts(<<-CONFIG.gsub(/^\s+/, ""))
+        # See README for explanation of these settings.
+        # user and pass are required except for Top Plays
+        user=#{ Conf.mlb_username }
+        pass=#{ Conf.mlb_password }
+        video_player=mplayer -cache 4096
+        audio_player=#{ audio_player }
+        favorite=
+        use_nexdef=0
+        speed=1200
+        min_bps=1200
+        max_bps=2400
+        adaptive_stream=0
+        live_from_start=#{ if live then 0 else 1 end }
+        # Many more options are available and documented at:
+        # http://sourceforge.net/p/mlbviewer/wiki/Home/
+      CONFIG
+    end
+
+    # Build parameters for mlbplay command.
+    mlbviewer_py       = File.join(Conf.app_root, "mlbviewer2014", "mlbplay.py")
     event_id           = "event_id=#{ id }"
-    audio              = "audio=det" # TODO - Make this flexible
+    audio              = "audio=#{ team.code }"
     start_date         = "startdate=#{ date.strftime('%m/%d/%y') }"
     debug              = "debug=1"
     args               = [ mlbviewer_py, event_id, audio, start_date, debug ].map(&:shellwords)
     mlbviewer_response = `/usr/bin/python #{ args.join(' ') } 2>&1`
 
+    # Find the rtmpdump command printed in the output.
     case mlbviewer_response
     when %r[Requested Media Not Available Yet]m
       raise GameNotStarted
     when %r[Media URL received:.*(^rtmpdump.*?) \| mplayer]m
-      $1
+      if stdout
+        $1
+      else
+        "#{ $1 } | #{ audio_player } -"
+      end
     else
       raise MediaNotFound, "Cannot find URL in: #{ mlbviewer_response.inspect }"
     end

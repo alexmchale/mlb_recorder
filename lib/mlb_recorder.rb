@@ -15,6 +15,7 @@ Bundler.require(:default)
 Dir.chdir(pwd)
 
 # Load local libraries
+require "mlb_recorder/exceptions"
 require "mlb_recorder/config"
 require "mlb_recorder/extensions"
 require "mlb_recorder/mlb_recorder"
