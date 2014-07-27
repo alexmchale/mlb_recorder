@@ -8,7 +8,7 @@ class MlbGame
   attr_reader :status
 
   STATUS_WAITING   = [ "Preview", "Delayed Start", "Pre-Game" ]
-  STATUS_STARTED   = [ "Warmup", "In Progress", "Delayed" ]
+  STATUS_STARTED   = [ "Warmup", "In Progress", "Manager Challenge", "Delayed" ]
   STATUS_FINISHED  = [ "Final", "Game Over" ]
   STATUS_CANCELLED = [ "Postponed", "Suspended" ]
   STATUS_ALL       = STATUS_WAITING + STATUS_STARTED + STATUS_FINISHED + STATUS_CANCELLED
