@@ -2,51 +2,37 @@ class RecordApp < Thor
 
   desc "games DATE", "List the games that are available for the given date, defaults to today"
   def games(date = Date.today)
-    time = -> game {
-      game.time.in_time_zone(
-        if Conf.time_zone_name?
-          Conf.time_zone
-        else
-          game.home_team.time_zone
-        end
-      ).strftime("%m/%d/%y %I%P").gsub(/ 0/, " ").gsub(/^0+/, "")
-    }
+    # Ensure we've got a date object.
+    date = Chronic.parse(date).to_date
 
+    # Prompt for the user's time zone if it's not set.
+    Conf.time_zone_name? or Conf.time_zone_name!
+
+    # Build the columns used in the output table.
     columns = -> game {
       {
-        "Game ID"   => if game then game.id             end,
-        "Time"      => if game then time[game]          end,
-        "Away Team" => if game then game.away_team.name end,
-        "Home Team" => if game then game.home_team.name end,
-        "Status"    => if game then game.status         end,
+        "Game ID"   => if game then game.id                end,
+        "Time"      => if game then game.local_time_string end,
+        "Away Team" => if game then game.away_team.name    end,
+        "Home Team" => if game then game.home_team.name    end,
+        "Status"    => if game then game.status            end,
       }
     }
 
-    unless Conf.time_zone_name?
-      choose do |menu|
-        menu.prompt = "What's your time zone? "
-        menu.choices(*ActiveSupport::TimeZone.us_zones.map(&:name)) do |choice|
-          Conf.time_zone_name = choice
-        end
-      end
-    end
-
-    date  = Chronic.parse(date).to_date unless date.kind_of?(Date)
     table = Terminal::Table.new(headings: columns[nil].keys.map(&:yellow))
 
     MlbGameList.new(date).games.each.with_index do |game, i|
       # Colorize the given string
-      color = -> string {
-        if [ game.home_team, game.away_team ].include? Conf.favorite_team
-          string.to_s.yellow
-        elsif i%2 == 0
-          string.to_s.cyan
-        else
-          string.to_s.blue
-        end
-      }
+      color1 = if i%2==0 then :cyan else :blue end
+      color2 = 0
 
-      table << columns[game].values.map { |x| color[x] }
+      # Override the colors for favorite team
+      if [ game.home_team, game.away_team ].include?(Conf.favorite_team)
+        color1 = 220
+        color2 = 17
+      end
+
+      table << columns[game].values.map { |x| x.to_s.color(color1).on_color(color2) }
     end
 
     puts table

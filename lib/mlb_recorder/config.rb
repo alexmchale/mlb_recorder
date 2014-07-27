@@ -51,6 +51,15 @@ class Conf
       ActiveSupport::TimeZone.all.find { |zone| zone.name == time_zone_name }
     end
 
+    def time_zone_name!
+      choose do |menu|
+        menu.prompt = "What's your time zone? "
+        menu.choices(*ActiveSupport::TimeZone.us_zones.map(&:name)) do |choice|
+          Conf.time_zone_name = choice
+        end
+      end
+    end
+
     def favorite_team
       MlbTeam.find(favorite_team_name) if favorite_team_name?
     end

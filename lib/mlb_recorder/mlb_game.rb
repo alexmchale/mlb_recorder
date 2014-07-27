@@ -54,6 +54,16 @@ class MlbGame
     end
   end
 
+  def local_time_string
+    time.in_time_zone(
+      if Conf.time_zone_name?
+        Conf.time_zone
+      else
+        home_team.time_zone
+      end
+    ).strftime("%m/%d/%y %I%P").gsub(/ 0/, " ").gsub(/^0+/, "")
+  end
+
   def waiting?   ; status =~ /#{ STATUS_WAITING.join '|' }/i   ; end
   def started?   ; status =~ /#{ STATUS_STARTED.join '|' }/i   ; end
   def finished?  ; status =~ /#{ STATUS_FINISHED.join '|' }/i  ; end
