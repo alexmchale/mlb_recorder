@@ -19,23 +19,25 @@ class RecordApp < Thor
       }
     }
 
-    table = Terminal::Table.new(headings: columns[nil].keys.map(&:yellow))
+    # Output a table with the game listing.
+    puts Terminal::Table.new(headings: columns[nil].keys.map(&:yellow)) do |table|
+      MlbGameList.new(date).games.each.with_index do |game, i|
+        # Colorize the given string
+        color1 = if i%2==0 then :cyan else :blue end
+        color2 = 0
 
-    MlbGameList.new(date).games.each.with_index do |game, i|
-      # Colorize the given string
-      color1 = if i%2==0 then :cyan else :blue end
-      color2 = 0
+        # Override the colors for favorite team
+        if [ game.home_team, game.away_team ].include?(Conf.favorite_team)
+          color1 = 220
+          color2 = 17
+        end
 
-      # Override the colors for favorite team
-      if [ game.home_team, game.away_team ].include?(Conf.favorite_team)
-        color1 = 220
-        color2 = 17
+        # Add the table row
+        table << columns[game].values.map do |x|
+          x.to_s.color(color1).on_color(color2)
+        end
       end
-
-      table << columns[game].values.map { |x| x.to_s.color(color1).on_color(color2) }
     end
-
-    puts table
   end
 
   desc "record GAME_ID", "Record the specified game"
