@@ -99,11 +99,11 @@ class RecordApp < Thor
     title = "%s at %s - %s-%d" % [
       game.away_team.short_name,
       game.home_team.short_name,
-      game.time.strftime('%m/%d/%y'),
+      game.date.strftime('%m/%d/%y'),
       game.game_number,
     ]
 
-    mp3  = [ bcast, game.time.strftime('%Y%m%d'), '1', "mp3" ].join(".")
+    mp3  = [ bcast, game.date.strftime('%Y%m%d'), '1', "mp3" ].join(".")
     tags = { tt: title, ta: game.venue_name, tl: "Major League Baseball", tg: 12 }
     tags = tags.map { |k, v| "--#{ k } #{ v.to_s.shellwords }" }.join(" ")
 
