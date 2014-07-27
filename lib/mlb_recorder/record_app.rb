@@ -136,6 +136,58 @@ class RecordApp < Thor
     sh render_sh
   end
 
+  desc "stream GAME_ID", "Stream the specified game to a wav file"
+  def stream(game_id)
+    ## Get game details
+
+    game_spec = game_id.split(",")
+
+    game =
+      if game_spec.length == 1
+        MlbGameList.game(game_id)
+      elsif game_spec.length == 2
+        list  = MlbGameList.new(Date.parse(game_spec[0]))
+        games = list.find_with_team(game_spec[1])
+        games[0]
+      elsif game_spec.length == 3
+        list  = MlbGameList.new(Date.parse(game_spec[0]))
+        games = list.find_with_team(game_spec[1])
+        games.find { |game| game.game_number == Integer(game_spec[2]) }
+      end
+
+    raise "game not found" unless game.kind_of? MlbGame
+
+    ## Details about the destination
+
+    hosted_dir     = "/webapps/downloads/alexcast"
+    mlbviewer_root = File.expand_path("../../../mlbviewer2014", __FILE__)
+    wavfile        = "/tmp/mlbgame.wav"
+    render_sh      = File.join(hosted_dir, "render.sh")
+
+    ## Print game details
+
+    table = Terminal::Table.new
+
+    table << [ "ID"      .yellow, game.id                                                .green ]
+    table << [ "Time"    .yellow, game.time.to_s                                         .green ]
+    table << [ "Matchup" .yellow, "#{ game.away_team.name } at #{ game.home_team.name }" .green ]
+    table << [ "Status"  .yellow, game.status                                            .green ]
+    table << [ "Venue"   .yellow, game.venue_name                                        .green ]
+
+    puts table
+
+    ## Stream to disk
+
+    bcast = 'det'
+    j     = "j=#{ game.time.strftime('%m/%d/%y') }"
+    e     = "e=#{ game.id }"
+    a     = "a=#{ bcast }"
+    args  = [ "#{mlbviewer_root}/mlbplay.py", j, e, a ].map(&:shellwords)
+
+    FileUtils.rm_rf wavfile
+    sh "python #{ args.join ' ' }" or die "Could not get the audio stream."
+  end
+
   desc "favorite", "Set your favorite team"
   def favorite
     choose do |menu|
