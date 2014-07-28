@@ -150,10 +150,13 @@ class RecordApp < Thor
       table << [ "Venue"   .yellow, game.venue_name                                        .green ]
     end)
 
-    ## Stream to disk
+    ## Stream to disk as an mp3
+
+    stream = game.streaming_command(stdout: true)
+    encode = "avconv -i - -c copy #{ path.shellwords }"
 
     FileUtils.rm_rf path
-    sh game.streaming_command(filename: path) or die "Could not get the audio stream."
+    sh "#{ stream } | #{ encode }" or die "Could not get the audio stream."
   end
 
   desc "favorite", "Set your favorite team"
