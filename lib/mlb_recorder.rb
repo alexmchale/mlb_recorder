@@ -1,3 +1,6 @@
+# Ensure this file's path is in the load path
+$LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__))
+
 # Load standard libraries
 require "time"
 require "date"
