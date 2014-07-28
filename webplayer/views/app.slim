@@ -1,0 +1,25 @@
+head
+
+  link href="app.css" rel="stylesheet" type="text/css" media="all"
+
+  script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"
+  script src="app.js"
+
+body
+
+  h1 Audio Player
+
+  audio id="player"
+    source src="mlbgame.mp3" type="audio/mp3" id="source"
+
+  ul class="controls"
+    li
+      div.currentstatus = "Status is unknown"
+    li
+      a.button.playbutton href="#" = "Play audio stream"
+    li
+      a.button.changetime href="#" data-amount="-30" = "Go back 30 seconds"
+    li
+      a.button.changetime href="#" data-amount="30" = "Skip forward 30 seconds"
+    li
+      a.button.changetime href="#" data-amount="120" = "Skip forward 2 minutes"
