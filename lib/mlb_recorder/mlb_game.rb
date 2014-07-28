@@ -58,6 +58,9 @@ class MlbGame
       CONFIG
     end
 
+    # Make sure the requested team exists in this game.
+    team = home_team unless team == away_team
+
     # Build parameters for mlbplay command.
     mlbviewer_py       = File.join(Conf.app_root, "mlbviewer2014", "mlbplay.py")
     event_id           = "event_id=#{ id }"
