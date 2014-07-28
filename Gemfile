@@ -8,3 +8,8 @@ gem 'activesupport', require: 'active_support/time'
 gem 'term-ansicolor', require: 'term/ansicolor'
 gem 'typhoeus'
 gem 'highline', require: 'highline/import'
+gem 'sinatra', require: false
+gem 'slim'
+gem 'compass'
+gem 'sass'
+gem 'coffee-script'
