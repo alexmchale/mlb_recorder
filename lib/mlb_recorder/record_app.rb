@@ -23,7 +23,7 @@ class RecordApp < Thor
     puts(Terminal::Table.new(headings: columns[nil].keys.map(&:yellow)) do |table|
       MlbGameList.new(date).games.each.with_index do |game, i|
         # Colorize the given string
-        color1 = if i%2==0 then :cyan else :blue end
+        color1 = if i%2==0 then 33 else 26 end
         color2 = 0
 
         # Override the colors for favorite team
